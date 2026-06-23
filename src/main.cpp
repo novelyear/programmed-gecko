@@ -1,10 +1,59 @@
+#include "pch.h"
+#include <iostream>
+#include <fstream>
+#include "nlohmann/json.hpp"
+#include "BodyChain.h"
+#include "Renderer.h"
+#include <string>
 
-// 程序化壁虎动画
+#define BODY_CONFIG_FILE "src/body-config.json"
+using namespace nlohmann;
 
-// TODO 设置不同大小的圆，利用参数方程取两侧端点，绘制贝塞尔曲线身体
+void initialize_body(BodyChain* body)
+{
+	try
+	{
+		std::ifstream file(BODY_CONFIG_FILE);
+		if (!file.is_open())
+		{
+			std::cerr << "Failed to open: " << BODY_CONFIG_FILE << std::endl;
+			return;
+		}
 
-// TODO 设置合理的距离约束和旋转角度约束，模拟身体
+		json j;
+		file >> j;
 
-// TODO 鼠标指针引导运动，取头部和指针的矢量作为速度
+		if (!j.contains("distance") ||
+			!j.contains("min_angle") ||
+			!j.contains("nodes"))
+		{
+			std::cerr << "Some essential data Miss!" << std::endl;
+			return;
+		}
 
-// TODO 足部运动……
+		std::vector<std::vector<float>> body_nodes_data;
+		for (const auto& v : j["nodes"]) {
+			body_nodes_data.push_back({ v[0], v[1], v[2] });
+		}
+		body->createNodeFromArray(body_nodes_data);
+		body->setDistance(j["distance"]);
+		body->setMinAngle(j["min_angle"]);
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error loading body data: " << e.what() << std::endl;
+		return;
+	}
+}
+
+int main()
+{
+	BodyChain body;
+	initialize_body(&body);
+	Renderer renderer(1600, 1200, "gecko");
+	while (true) {
+		auto bodyData = body.getNodeData();
+		auto footData = std::vector<std::vector<float>>();
+		renderer.render(bodyData, footData);
+	}
+	return 0;
+}
