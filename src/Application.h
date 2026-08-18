@@ -8,8 +8,9 @@
 class Application
 {
 public:
-	Application(int width, int height, const sf::String& title);
+	Application(const sf::String& title);
 	void render();
+	void update();
 
 private:
 	sf::Vector2f nodeTangent(int nodeIndex) const;

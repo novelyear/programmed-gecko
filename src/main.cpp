@@ -7,9 +7,10 @@
 
 int main()
 {
-	Application app(1600, 1200, "gecko");
+	Application app("gecko");
 	while (true) {
 		app.render();
+		app.update();
 	}
 	return 0;
 }

@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Application.h"
-#include <cmath>
 #include <iostream>
 #include <fstream>
 #include "nlohmann/json.hpp"
@@ -23,8 +22,7 @@ namespace
     }
 }
 
-Application::Application(int width, int height, const sf::String& title)
-    : window(sf::VideoMode((unsigned int)width, (unsigned int)height), title)
+Application::Application(const sf::String& title) : window(sf::VideoMode(1600, 1200), title)
 {
     try
     {
@@ -41,21 +39,30 @@ Application::Application(int width, int height, const sf::String& title)
 
         if (!j.contains("distance") ||
             !j.contains("min_angle") ||
-            !j.contains("nodes"))
+            !j.contains("nodes") ||
+            !j.contains("window_width") ||
+            !j.contains("window_height"))
         {
             std::cerr << "Some essential data Miss!" << std::endl;
             return;
+        
         }
+		unsigned int window_width = j["window_width"];
+		unsigned int window_height = j["window_height"];
 
         std::vector<std::vector<float>> body_nodes_data;
         for (const auto& v : j["nodes"]) {
-            body_nodes_data.push_back({ v[0], v[1], v[2] });
+            body_nodes_data.push_back({ (float)v[0] * window_width, (float)v[1] * window_height, v[2] });
         }
         body.createNodeFromArray(body_nodes_data);
         body.setDistance(j["distance"]);
         body.setMinAngle(j["min_angle"]);
         m_frontNodeIndex = j.value("front", m_frontNodeIndex);
         m_hindNodeIndex = j.value("hind", m_hindNodeIndex);
+
+
+        window.setSize({ window_width, window_height });
+		window.setView(sf::View(sf::FloatRect(0.f, 0.f, static_cast<float>(window_width), static_cast<float>(window_height))));
 
         setupFoot(leftFront, m_frontNodeIndex, true, true);
         setupFoot(rightFront, m_frontNodeIndex, false, true);
@@ -124,4 +131,15 @@ void Application::render()
     rightHind.render(footRootAt(m_hindNodeIndex, false), nodeTangent(m_hindNodeIndex), window);
 
     window.display();
+}
+
+// Application.cpp
+
+void Application::update()
+{
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    sf::Vector2f target(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+
+    const float speed = 0.01f;
+    body.moveTowards(target, speed);
 }

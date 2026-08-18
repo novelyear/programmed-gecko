@@ -12,6 +12,7 @@ public:
 	const std::vector<std::vector<float>> getNodeData() const;
 	void render(sf::RenderWindow& window);
 	const Node getNode(int id);
+	void moveTowards(const sf::Vector2f & target, float speed);
 private:
 	std::vector<Node> nodes;
 	float distance;

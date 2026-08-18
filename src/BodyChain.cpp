@@ -114,3 +114,33 @@ const Node BodyChain::getNode(int id)
 {
     return nodes[id];
 }
+
+void BodyChain::moveTowards(const sf::Vector2f& target, float speed)
+{
+    if (nodes.empty()) return;
+
+    Node& head = nodes.front();
+    sf::Vector2f headPos(head.getX(), head.getY()); 
+    sf::Vector2f offset = (target - headPos) * speed;
+    head.setX(headPos.x + offset.x);
+    head.setY(headPos.y + offset.y);
+
+    for (size_t i = 1; i < nodes.size(); ++i) {
+        Node& curr = nodes[i];
+        const Node& prev = nodes[i - 1];
+        sf::Vector2f prevPos(prev.getX(), prev.getY());
+        sf::Vector2f currPos(curr.getX(), curr.getY());
+
+        sf::Vector2f dir = currPos - prevPos;
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len > 1e-6f) {
+            sf::Vector2f newPos = prevPos + (dir / len) * distance;
+            curr.setX(newPos.x);
+            curr.setY(newPos.y);
+        }
+        else {
+            curr.setX(prevPos.x + distance);
+            curr.setY(prevPos.y);
+        }
+    }
+}
