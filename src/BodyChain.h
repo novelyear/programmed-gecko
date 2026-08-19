@@ -13,6 +13,10 @@ public:
 	void render(sf::RenderWindow& window);
 	const Node getNode(int id);
 	void moveTowards(const sf::Vector2f & target, float speed);
+	void applyConstraints(int iterations);
+	void renderNodes(sf::RenderWindow& window);
+
+	const float getNodeRadius(int index);
 private:
 	std::vector<Node> nodes;
 	float distance;

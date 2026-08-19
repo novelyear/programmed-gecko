@@ -17,3 +17,4 @@ const std::vector<float> Node::getData() const
 }
 const float Node::getX() const { return position.x; }
 const float Node::getY() const { return position.y; }
+const float Node::getR() const { return radius; }

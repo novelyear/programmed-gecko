@@ -1,6 +1,8 @@
 {
 	"distance": 10.0,
-	"min_angle": 20.0,
+	"min_angle": 175.0,
+	"default_angle1": 45,
+	"default_angle2":  45,
 	"window_width": 1920,
   "window_height": 1440,
 	"nodes": [

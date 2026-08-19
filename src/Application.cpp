@@ -5,23 +5,6 @@
 #include "nlohmann/json.hpp"
 #include "beizer.cpp"
 
-namespace
-{
-    sf::Vector2f DefaultFootTarget(
-        const sf::Vector2f& root,
-        const sf::Vector2f& tangent,
-        bool attachLeft,
-        bool isFront)
-    {
-        const sf::Vector2f n(-tangent.y, tangent.x);
-        const sf::Vector2f outward = attachLeft ? n : Mul(n, -1.f);
-        const sf::Vector2f faceDir = isFront ? Mul(tangent, -1.f) : tangent;
-        const sf::Vector2f dir = Normalize(
-            Add(Add(Mul(outward, 0.45f), Mul(faceDir, 0.35f)), sf::Vector2f(0.f, 0.55f)));
-        return Add(root, Mul(dir, 20.f));
-    }
-}
-
 Application::Application(const sf::String& title) : window(sf::VideoMode(1600, 1200), title)
 {
     try
@@ -68,6 +51,13 @@ Application::Application(const sf::String& title) : window(sf::VideoMode(1600, 1
         setupFoot(rightFront, m_frontNodeIndex, false, true);
         setupFoot(leftHind, m_hindNodeIndex, true, false);
         setupFoot(rightHind, m_hindNodeIndex, false, false);
+
+        if (j.contains("default_angle1") && j.contains("default_angle2")) {
+            leftFront.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
+            rightFront.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
+            leftHind.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
+            rightHind.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
+        }
     }
     catch (const std::exception& e) {
         std::cerr << "Error loading body data: " << e.what() << std::endl;
@@ -112,18 +102,24 @@ sf::Vector2f Application::footRootAt(int nodeIndex, bool attachLeft) const
 
 void Application::setupFoot(Foot& foot, int nodeIndex, bool attachLeft, bool isFront)
 {
-    foot = Foot(12.f, 12.f);
+    foot = Foot(40.f, 40.f, isFront, attachLeft);
     const sf::Vector2f root = footRootAt(nodeIndex, attachLeft);
-    const sf::Vector2f tangent = nodeTangent(nodeIndex);
-    const sf::Vector2f target = DefaultFootTarget(root, tangent, attachLeft, isFront);
-    foot.update(root, tangent, target, 100.f, 0.f);
-    foot.captureDefaultPose();
+    const sf::Vector2f rootDir = nodeTangent(nodeIndex);
+
+    const sf::Vector2f normal(-rootDir.y, rootDir.x);
+    const sf::Vector2f outward = attachLeft ? normal : Mul(normal, -1.f);
+    const sf::Vector2f faceDir = isFront ? Mul(rootDir, -1.f) : rootDir;
+    const sf::Vector2f target = foot.getEnd(root, rootDir);
+
+    foot.update(root, rootDir);
+	foot.setTargetPos(target);
 }
 
 void Application::render()
 {
     window.clear(sf::Color::Black);
     body.render(window);
+	body.renderNodes(window);
 
     leftFront.render(footRootAt(m_frontNodeIndex, true), nodeTangent(m_frontNodeIndex), window);
     rightFront.render(footRootAt(m_frontNodeIndex, false), nodeTangent(m_frontNodeIndex), window);
@@ -142,4 +138,9 @@ void Application::update()
 
     const float speed = 0.01f;
     body.moveTowards(target, speed);
+    
+	leftFront.update(footRootAt(m_frontNodeIndex, true), nodeTangent(m_frontNodeIndex));
+	rightFront.update(footRootAt(m_frontNodeIndex, false), nodeTangent(m_frontNodeIndex));
+	leftHind.update(footRootAt(m_hindNodeIndex, true), nodeTangent(m_hindNodeIndex));
+	rightHind.update(footRootAt(m_hindNodeIndex, false), nodeTangent(m_hindNodeIndex));
 }

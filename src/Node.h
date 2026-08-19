@@ -7,6 +7,7 @@ public:
 	const std::vector<float> getData() const;
 	const float getX() const;
 	const float getY() const;
+	const float getR() const;
 	
 	void setData(float x, float y, float r);
 	void setX(float x);

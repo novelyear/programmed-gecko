@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "BodyChain.h"
 #include <iostream>
+#include <cmath>
+#include <algorithm>
 #include "beizer.cpp"
-#include <SFML/Graphics.hpp>
+
 
 void BuildBodySides(
     const std::vector<std::vector<float>> body,
@@ -74,6 +76,15 @@ void BodyChain::setMinAngle(float a)
 	this->min_angle = a;
 }
 
+const float BodyChain::getNodeRadius(int index)
+{
+	if (index < 0 || index >= nodes.size()) {
+		std::cerr << "Invalid node index!" << std::endl;
+		return 0.0f;
+	}
+	return nodes[index].getR();
+}
+
 const std::vector<std::vector<float>> BodyChain::getNodeData() const
 {
 	std::vector<std::vector<float>> nodeData;
@@ -110,9 +121,77 @@ void BodyChain::render(sf::RenderWindow& window)
 	window.draw(va);
 }
 
+void BodyChain::renderNodes(sf::RenderWindow& window)
+{
+	for (const auto& node : nodes) {
+        float r = node.getData()[2];
+		sf::CircleShape circle(r);
+		circle.setFillColor(sf::Color(220, 120, 120));
+		circle.setOrigin(r, r);
+		circle.setPosition(node.getX(), node.getY());
+		window.draw(circle);
+	}
+}
+
 const Node BodyChain::getNode(int id)
 {
     return nodes[id];
+}
+
+void BodyChain::applyConstraints(int iterations)
+{
+    size_t n = nodes.size();
+    if (n < 2) return;
+
+    for (int iter = 0; iter < iterations; ++iter) {
+        for (size_t i = 1; i < n; ++i) {
+            Node& curr = nodes[i];
+            const Node& prev = nodes[i - 1];
+            sf::Vector2f prevPos(prev.getX(), prev.getY());
+            sf::Vector2f currPos(curr.getX(), curr.getY());
+            sf::Vector2f dir = currPos - prevPos;
+            float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+            if (len > 1e-6f) {
+                sf::Vector2f newPos = prevPos + (dir / len) * distance;
+                curr.setX(newPos.x);
+                curr.setY(newPos.y);
+            }
+            else {
+                curr.setX(prevPos.x + distance);
+                curr.setY(prevPos.y);
+            }
+        }
+
+        for (size_t i = 1; i < n - 1; ++i) {
+            const Node& prev = nodes[i - 1];
+            Node& curr = nodes[i];
+            const Node& next = nodes[i + 1];
+
+            sf::Vector2f v1(prev.getX() - curr.getX(), prev.getY() - curr.getY());
+            sf::Vector2f v2(next.getX() - curr.getX(), next.getY() - curr.getY());
+            float len1 = std::sqrt(v1.x * v1.x + v1.y * v1.y);
+            float len2 = std::sqrt(v2.x * v2.x + v2.y * v2.y);
+            if (len1 < 1e-6f || len2 < 1e-6f) continue;
+
+            float dot = v1.x * v2.x + v1.y * v2.y;
+            float cosAngle = dot / (len1 * len2);
+            cosAngle = std::clamp(cosAngle, -1.0f, 1.0f);
+            float angle = std::acos(cosAngle) / 3.1415926 * 180;
+
+            if (angle < min_angle) {
+                sf::Vector2f u1 = -v1 / len1;
+                sf::Vector2f u2 = v2 / len2;
+                sf::Vector2f bisector = u1 + u2;
+                float bisLen = std::sqrt(bisector.x * bisector.x + bisector.y * bisector.y);
+                if (bisLen > 1e-6f) {
+                    bisector /= bisLen;
+                    const float pushDist = distance * 0.1f;
+                    curr.setX(curr.getX() + bisector.x * pushDist);
+                    curr.setY(curr.getY() + bisector.y * pushDist);
+                }
+            }
+        }
+    }
 }
 
 void BodyChain::moveTowards(const sf::Vector2f& target, float speed)
@@ -125,22 +204,5 @@ void BodyChain::moveTowards(const sf::Vector2f& target, float speed)
     head.setX(headPos.x + offset.x);
     head.setY(headPos.y + offset.y);
 
-    for (size_t i = 1; i < nodes.size(); ++i) {
-        Node& curr = nodes[i];
-        const Node& prev = nodes[i - 1];
-        sf::Vector2f prevPos(prev.getX(), prev.getY());
-        sf::Vector2f currPos(curr.getX(), curr.getY());
-
-        sf::Vector2f dir = currPos - prevPos;
-        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-        if (len > 1e-6f) {
-            sf::Vector2f newPos = prevPos + (dir / len) * distance;
-            curr.setX(newPos.x);
-            curr.setY(newPos.y);
-        }
-        else {
-            curr.setX(prevPos.x + distance);
-            curr.setY(prevPos.y);
-        }
-    }
+    applyConstraints(8);
 }
