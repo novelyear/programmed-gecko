@@ -52,11 +52,24 @@ Application::Application(const sf::String& title) : window(sf::VideoMode(1600, 1
         setupFoot(leftHind, m_hindNodeIndex, true, false);
         setupFoot(rightHind, m_hindNodeIndex, false, false);
 
-        if (j.contains("default_angle1") && j.contains("default_angle2")) {
-            leftFront.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
-            rightFront.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
-            leftHind.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
-            rightHind.setDefaultAngle(j["default_angle1"], j["default_angle2"]);
+        if (j.contains("front_default_angle1") && j.contains("front_default_angle2") &&
+            j.contains("hind_default_angle1") && j.contains("hind_default_angle2")) {
+            leftFront.setDefaultAngle(
+                j["front_default_angle1"],
+                j["front_default_angle2"]
+            );
+            rightFront.setDefaultAngle(
+                j["front_default_angle1"],
+                j["front_default_angle2"]
+            );
+            leftHind.setDefaultAngle(
+                j["hind_default_angle1"],
+                j["hind_default_angle2"]
+            );
+            rightHind.setDefaultAngle(
+                j["hind_default_angle1"],
+                j["hind_default_angle2"]
+            );
         }
     }
     catch (const std::exception& e) {
@@ -102,7 +115,7 @@ sf::Vector2f Application::footRootAt(int nodeIndex, bool attachLeft) const
 
 void Application::setupFoot(Foot& foot, int nodeIndex, bool attachLeft, bool isFront)
 {
-    foot = Foot(40.f, 40.f, isFront, attachLeft);
+    foot = Foot(60.f, 60.f, isFront, attachLeft);
     const sf::Vector2f root = footRootAt(nodeIndex, attachLeft);
     const sf::Vector2f rootDir = nodeTangent(nodeIndex);
 
@@ -119,7 +132,7 @@ void Application::render()
 {
     window.clear(sf::Color::Black);
     body.render(window);
-	body.renderNodes(window);
+	//body.renderNodes(window);
 
     leftFront.render(footRootAt(m_frontNodeIndex, true), nodeTangent(m_frontNodeIndex), window);
     rightFront.render(footRootAt(m_frontNodeIndex, false), nodeTangent(m_frontNodeIndex), window);

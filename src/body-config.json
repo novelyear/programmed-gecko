@@ -1,10 +1,13 @@
 {
 	"distance": 10.0,
 	"min_angle": 175.0,
-	"default_angle1": 45,
-	"default_angle2":  45,
+	"front_default_angle1": 30,
+	"front_default_angle2": 80,
+
+	"hind_default_angle1": -30,
+	"hind_default_angle2": 150,
 	"window_width": 1920,
-  "window_height": 1440,
+	"window_height": 1440,
 	"nodes": [
 		[ 0.500000, 0.309444, 30 ],
 		[ 0.500000, 0.312222, 33.1 ],
@@ -76,7 +79,7 @@
 		[ 0.500000, 0.599444, 4.5 ],
 		[ 0.500000, 0.605556, 2 ]
 	],
-	"front": 25, 
+	"front": 25,
 	"hind": 49,
 	"joint_num": 2,
 	"move_threshold": 10

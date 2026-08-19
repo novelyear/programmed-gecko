@@ -109,16 +109,19 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
                 a.y * b.x - a.x * b.y;
             return std::atan2(crossCCW, dot);
         };
+    auto ResetFoot = [&]()
+        {
+            m_angle1 = m_defaultAngle1;
+            m_angle2 = m_defaultAngle2;
+            targetPos = getEnd(rootWorldPos, rootDir);
+        };
     sf::Vector2f delta = targetPos - rootWorldPos;
     float dist = Length(delta);
 
     bool needStep = (dist > m_len1 + m_len2);
 
     if (needStep) {
-        m_angle1 = m_defaultAngle1;
-        m_angle2 = m_defaultAngle2;
-
-        targetPos = this->getEnd(rootWorldPos, rootDir);
+        ResetFoot();
         return;
     }
 
@@ -210,6 +213,42 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
             candidateA.openingScore >= candidateB.openingScore
             ? (isFront ? candidateA : candidateB)
             : (isFront ? candidateB : candidateA);
+
+        constexpr float PI = 3.14159265358979323846f;
+        constexpr float DEG_TO_RAD = PI / 180.0f;
+
+        constexpr float FRONT_MIN_ELBOW =
+            20.0f * DEG_TO_RAD;
+
+        constexpr float HIND_MAX_ELBOW =
+            160.0f * DEG_TO_RAD;
+        const sf::Vector2f elbowToRoot(
+            -chosen.j1Dir.x,
+            -chosen.j1Dir.y
+        );
+        float cosElbow =
+            Dot(elbowToRoot, chosen.j2Dir);
+        cosElbow =
+            std::clamp(cosElbow, -1.0f, 1.0f);
+        const float elbowAngle =
+            std::acos(cosElbow);
+        bool invalidPose = false;
+        if (isFront)
+        {
+            constexpr float OUTWARD_EPS = 1e-4f;
+            const float outwardComponent =
+                Dot(chosen.j1Dir, outward);
+            if (outwardComponent <= OUTWARD_EPS)
+                invalidPose = true;
+            if (elbowAngle < FRONT_MIN_ELBOW)
+                invalidPose = true;
+        }
+        else
+            if (elbowAngle > HIND_MAX_ELBOW)
+                invalidPose = true;
+
+        if (invalidPose)
+            ResetFoot();
     const float sign =
         (isFront ^ attachLeft) ? 1.f : -1.f;
     const float actualAngle1 =
@@ -266,34 +305,34 @@ void Foot::render(
 
     window.draw(va);
 
-    sf::VertexArray lines(sf::LinesStrip, 3);
-    lines[0].position = root;
-    lines[0].color = sf::Color::White;
-    lines[1].position = j1;
-    lines[1].color = sf::Color::White;
-    lines[2].position = j2;
-    lines[2].color = sf::Color::White;
-    window.draw(lines);
+    //sf::VertexArray lines(sf::LinesStrip, 3);
+    //lines[0].position = root;
+    //lines[0].color = sf::Color::White;
+    //lines[1].position = j1;
+    //lines[1].color = sf::Color::White;
+    //lines[2].position = j2;
+    //lines[2].color = sf::Color::White;
+    //window.draw(lines);
 
-    const float pointRadius = 4.f;
-    sf::CircleShape dot(pointRadius);
-    dot.setOrigin(pointRadius, pointRadius);
+ //   const float pointRadius = 4.f;
+ //   sf::CircleShape dot(pointRadius);
+ //   dot.setOrigin(pointRadius, pointRadius);
 
-    dot.setFillColor(sf::Color::Blue);
-    dot.setPosition(root);
-    window.draw(dot);
+ //   dot.setFillColor(sf::Color::Blue);
+ //   dot.setPosition(root);
+ //   window.draw(dot);
 
-    dot.setFillColor(sf::Color::Green);
-    dot.setPosition(j1);
-    window.draw(dot);
+ //   dot.setFillColor(sf::Color::Green);
+ //   dot.setPosition(j1);
+ //   window.draw(dot);
 
-    dot.setFillColor(sf::Color::Red);
-    dot.setPosition(j2);
-    window.draw(dot);
+ //   dot.setFillColor(sf::Color::Red);
+ //   dot.setPosition(j2);
+ //   window.draw(dot);
 
-	dot.setFillColor(sf::Color::Yellow);
-	dot.setPosition(targetPos);
-	window.draw(dot);
+	//dot.setFillColor(sf::Color::Yellow);
+	//dot.setPosition(targetPos);
+	//window.draw(dot);
 }
 
 sf::Vector2f Foot::rotateCCW(
