@@ -3,7 +3,7 @@
 #include "BodyChain.h"
 #include "Foot.h"
 
-#define BODY_CONFIG_FILE "src/body-config.json"
+#define BODY_CONFIG_FILE "config/body-config.json"
 
 struct RenderConfig
 {
