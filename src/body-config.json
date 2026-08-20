@@ -2,7 +2,7 @@
 	"distance": 10.0,
 	"min_angle": 175.0,
 	"front_default_angle1": 30,
-	"front_default_angle2": 80,
+	"front_default_angle2": 60,
 
 	"hind_default_angle1": -30,
 	"hind_default_angle2": 150,

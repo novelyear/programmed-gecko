@@ -115,7 +115,7 @@ sf::Vector2f Application::footRootAt(int nodeIndex, bool attachLeft) const
 
 void Application::setupFoot(Foot& foot, int nodeIndex, bool attachLeft, bool isFront)
 {
-    foot = Foot(60.f, 60.f, isFront, attachLeft);
+    foot = Foot(isFront, attachLeft);
     const sf::Vector2f root = footRootAt(nodeIndex, attachLeft);
     const sf::Vector2f rootDir = nodeTangent(nodeIndex);
 
@@ -131,18 +131,16 @@ void Application::setupFoot(Foot& foot, int nodeIndex, bool attachLeft, bool isF
 void Application::render()
 {
     window.clear(sf::Color::Black);
-    body.render(window);
-	//body.renderNodes(window);
+    body.render(window, m_renderConfig.colorOfOutline);
+	body.renderNodes(window, m_renderConfig.colorOfInside);
 
-    leftFront.render(footRootAt(m_frontNodeIndex, true), nodeTangent(m_frontNodeIndex), window);
-    rightFront.render(footRootAt(m_frontNodeIndex, false), nodeTangent(m_frontNodeIndex), window);
-    leftHind.render(footRootAt(m_hindNodeIndex, true), nodeTangent(m_hindNodeIndex), window);
-    rightHind.render(footRootAt(m_hindNodeIndex, false), nodeTangent(m_hindNodeIndex), window);
+    leftFront.render(footRootAt(m_frontNodeIndex, true), nodeTangent(m_frontNodeIndex), window, m_renderConfig.colorOfInside);
+    rightFront.render(footRootAt(m_frontNodeIndex, false), nodeTangent(m_frontNodeIndex), window, m_renderConfig.colorOfInside);
+    leftHind.render(footRootAt(m_hindNodeIndex, true), nodeTangent(m_hindNodeIndex), window, m_renderConfig.colorOfInside);
+    rightHind.render(footRootAt(m_hindNodeIndex, false), nodeTangent(m_hindNodeIndex), window, m_renderConfig.colorOfInside);
 
     window.display();
 }
-
-// Application.cpp
 
 void Application::update()
 {

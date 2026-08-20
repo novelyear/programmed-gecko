@@ -22,21 +22,22 @@ namespace
     }
 }
 
-Foot::Foot() {}
-
-Foot::Foot(float len1, float len2, bool isFront, bool attachLeft)
-    : m_len1(len1), m_len2(len2), isFront(isFront), attachLeft(attachLeft)
+Foot::Foot(bool isFront, bool attachLeft, const FootKinematicsConfig& kinematics, const FootRenderConfig& render)
+    : isFront(isFront), attachLeft(attachLeft), m_kinematicsConfig(kinematics), m_renderConfig(render)
 {
     m_angle1 = m_defaultAngle1;
     m_angle2 = m_defaultAngle2;
+
+	m_len1 = kinematics.len1;
+	m_len2 = kinematics.len2;
 }
 
 void Foot::setTargetPos(const sf::Vector2f& pos) { targetPos = pos; }
 void Foot::setDefaultAngle(const float da1, const float da2)
 {
-	if (da1 < 0.f || da1 > M_PI || da2 < 0.f || da2 > M_PI) {
-		m_defaultAngle1 = da1 / 180.f * M_PI;
-		m_defaultAngle2 = da2 / 180.f * M_PI;
+	if (da1 < 0.f || da1 > (float)M_PI || da2 < 0.f || da2 >(float)M_PI) {
+		m_defaultAngle1 = da1 / 180.f * (float)M_PI;
+		m_defaultAngle2 = da2 / 180.f * (float)M_PI;
 		return;
 	}
     m_defaultAngle1 = da1;
@@ -126,31 +127,17 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
     }
 
     const sf::Vector2f rootDirN = Normalize(rootDir);
-
     const sf::Vector2f normal(-rootDirN.y, rootDirN.x);
     const sf::Vector2f outward =
         attachLeft ? normal : sf::Vector2f(-normal.x, -normal.y);
 
-    const sf::Vector2f targetDir(
-        delta.x / dist,
-        delta.y / dist
-    );
+    const sf::Vector2f targetDir(delta.x / dist, delta.y / dist);
+    const sf::Vector2f perpendicular(-targetDir.y, targetDir.x);
 
-    const sf::Vector2f perpendicular(
-        -targetDir.y,
-        targetDir.x
-    );
-
-    const float a =
-        (m_len1 * m_len1
-            - m_len2 * m_len2
-            + dist * dist)
-        / (2.f * dist);
+    const float a = (m_len1 * m_len1 - m_len2 * m_len2 + dist * dist) / (2.f * dist);
 
     float hSquared = m_len1 * m_len1 - a * a;
-
     hSquared = std::max(0.f, hSquared);
-
     const float h = std::sqrt(hSquared);
 
     const sf::Vector2f projectionPoint(
@@ -176,18 +163,8 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
     };
     auto MakeCandidate = [&](const sf::Vector2f& elbow) {
         Candidate candidate;
-        candidate.j1Dir = Normalize(
-            sf::Vector2f(
-                elbow.x - rootWorldPos.x,
-                elbow.y - rootWorldPos.y
-            )
-        );
-        candidate.j2Dir = Normalize(
-            sf::Vector2f(
-                targetPos.x - elbow.x,
-                targetPos.y - elbow.y
-            )
-        );
+        candidate.j1Dir = Normalize(sf::Vector2f(elbow.x - rootWorldPos.x, elbow.y - rootWorldPos.y));
+        candidate.j2Dir = Normalize(sf::Vector2f(targetPos.x - elbow.x, targetPos.y - elbow.y));
         sf::Vector2f opening(
             -candidate.j1Dir.x + candidate.j2Dir.x,
             -candidate.j1Dir.y + candidate.j2Dir.y
@@ -196,10 +173,7 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
         if (openingLength > EPS) {
             opening.x /= openingLength;
             opening.y /= openingLength;
-            const sf::Vector2f backward(
-                -rootDirN.x,
-                -rootDirN.y
-            );
+            const sf::Vector2f backward( -rootDirN.x, -rootDirN.y);
             candidate.openingScore = Dot(opening, backward);
         }
         else {
@@ -214,30 +188,20 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
             ? (isFront ? candidateA : candidateB)
             : (isFront ? candidateB : candidateA);
 
-        constexpr float PI = 3.14159265358979323846f;
-        constexpr float DEG_TO_RAD = PI / 180.0f;
+        const float PI = 3.14159265358979323846f;
+        const float DEG_TO_RAD = PI / 180.0f;
+        const float FRONT_MIN_ELBOW = m_kinematicsConfig.frontMinElbowDeg * DEG_TO_RAD;
+        const float HIND_MAX_ELBOW = m_kinematicsConfig.hindMaxElbowDeg * DEG_TO_RAD;
 
-        constexpr float FRONT_MIN_ELBOW =
-            20.0f * DEG_TO_RAD;
-
-        constexpr float HIND_MAX_ELBOW =
-            160.0f * DEG_TO_RAD;
-        const sf::Vector2f elbowToRoot(
-            -chosen.j1Dir.x,
-            -chosen.j1Dir.y
-        );
-        float cosElbow =
-            Dot(elbowToRoot, chosen.j2Dir);
-        cosElbow =
-            std::clamp(cosElbow, -1.0f, 1.0f);
-        const float elbowAngle =
-            std::acos(cosElbow);
+        const sf::Vector2f elbowToRoot( -chosen.j1Dir.x, -chosen.j1Dir.y);
+        float cosElbow = Dot(elbowToRoot, chosen.j2Dir);
+        cosElbow = std::clamp(cosElbow, -1.0f, 1.0f);
+        const float elbowAngle = std::acos(cosElbow);
         bool invalidPose = false;
         if (isFront)
         {
             constexpr float OUTWARD_EPS = 1e-4f;
-            const float outwardComponent =
-                Dot(chosen.j1Dir, outward);
+            const float outwardComponent = Dot(chosen.j1Dir, outward);
             if (outwardComponent <= OUTWARD_EPS)
                 invalidPose = true;
             if (elbowAngle < FRONT_MIN_ELBOW)
@@ -262,7 +226,7 @@ void Foot::update(const sf::Vector2f& rootWorldPos,
 void Foot::render(
     const sf::Vector2f& root,
     const sf::Vector2f& rootDir,
-    sf::RenderWindow& window)
+    sf::RenderWindow& window, const sf::Color color)
 {
     sf::Vector2f dir1 = getJ1Dir(rootDir);
     sf::Vector2f dir2 = getJ2Dir(rootDir);
@@ -273,66 +237,35 @@ void Foot::render(
     sf::Vector2f n1(-dir1.y, dir1.x);
     sf::Vector2f n2(-dir2.y, dir2.x);
 
-    const float radius = 12.f;
-    const float extend = radius * 1.5f;
+	const float radius = m_renderConfig.radius;
+    const float width = radius * 2.f;
+    const sf::Color footColor = color;
+    sf::RectangleShape arm1(sf::Vector2f(m_len1, width));
+    arm1.setOrigin(0.f, radius);
+    arm1.setPosition(root);
+    const float angle1 = std::atan2(dir1.y, dir1.x) * 180.f / (float)M_PI;
+    arm1.setRotation(angle1);
+    arm1.setFillColor(footColor);
+    window.draw(arm1);
 
-    std::vector<sf::Vector2f> pts;
+    sf::RectangleShape arm2(sf::Vector2f(m_len2, width));
+    arm2.setOrigin(0.f, radius);
+    arm2.setPosition(j1);
+    const float angle2 = std::atan2(dir2.y, dir2.x) * 180.f / (float)M_PI;
+    arm2.setRotation(angle2);
+    arm2.setFillColor(footColor);
+    window.draw(arm2);
 
-    pts.push_back(root - n1 * radius - dir1 * extend);
+    sf::CircleShape circle(radius);
+    circle.setOrigin(radius, radius);
+    circle.setFillColor(footColor);
+    circle.setPosition(root);
+    window.draw(circle);
 
-    pts.push_back(j1 - n1 * radius);
-    pts.push_back(j2 - n2 * radius);
-
-    pts.push_back(j2 + dir2 * radius);
-
-    pts.push_back(j2 + n2 * radius);
-    pts.push_back(j1 + n1 * radius);
-
-    pts.push_back(root + n1 * radius - dir1 * extend);
-
-    pts.push_back(root - n1 * radius - dir1 * extend);
-
-    const int samplesPerSeg = 12;
-    std::vector<sf::Vector2f> smooth =
-        SampleSmoothPolyline(pts, samplesPerSeg);
-
-    sf::VertexArray va(sf::LineStrip, smooth.size());
-
-    for (size_t i = 0; i < smooth.size(); ++i) {
-        va[i].position = smooth[i];
-        va[i].color = sf::Color(200, 150, 100);
-    }
-
-    window.draw(va);
-
-    //sf::VertexArray lines(sf::LinesStrip, 3);
-    //lines[0].position = root;
-    //lines[0].color = sf::Color::White;
-    //lines[1].position = j1;
-    //lines[1].color = sf::Color::White;
-    //lines[2].position = j2;
-    //lines[2].color = sf::Color::White;
-    //window.draw(lines);
-
- //   const float pointRadius = 4.f;
- //   sf::CircleShape dot(pointRadius);
- //   dot.setOrigin(pointRadius, pointRadius);
-
- //   dot.setFillColor(sf::Color::Blue);
- //   dot.setPosition(root);
- //   window.draw(dot);
-
- //   dot.setFillColor(sf::Color::Green);
- //   dot.setPosition(j1);
- //   window.draw(dot);
-
- //   dot.setFillColor(sf::Color::Red);
- //   dot.setPosition(j2);
- //   window.draw(dot);
-
-	//dot.setFillColor(sf::Color::Yellow);
-	//dot.setPosition(targetPos);
-	//window.draw(dot);
+    circle.setPosition(j1);
+    window.draw(circle);
+    circle.setPosition(j2);
+    window.draw(circle);
 }
 
 sf::Vector2f Foot::rotateCCW(

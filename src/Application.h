@@ -5,6 +5,12 @@
 
 #define BODY_CONFIG_FILE "src/body-config.json"
 
+struct RenderConfig
+{
+	sf::Color colorOfInside = sf::Color(200, 150, 100);
+	sf::Color colorOfOutline = sf::Color(100, 100, 100);
+};
+
 class Application
 {
 public:
@@ -25,5 +31,6 @@ private:
 	Foot rightHind;
 	int m_frontNodeIndex = 4;
 	int m_hindNodeIndex = 8;
+	RenderConfig m_renderConfig;
 };
 
